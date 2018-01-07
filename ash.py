@@ -215,6 +215,10 @@ def search_tweet(ext):
     if ext not in ('html', 'txt', 'json'):
         flask.abort(404)
 
+    basic_auth = app.config.get('T_SEARCH_BASIC_AUTH')
+    if basic_auth and (basic_auth != flask.request.authorization):
+        flask.abort(401)
+
     keyword = flask.request.args.get('q')
     if keyword:
         tdb = get_tdb()

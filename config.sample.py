@@ -19,3 +19,6 @@ class Config:
 
     # Directory path if loading images from FS
     T_MEDIA_FS_PATH = './media'
+
+    # Uncomment to enable basic auth on search page
+    #T_SEARCH_BASIC_AUTH = {'username': 'foo', 'password': 'bar'}
