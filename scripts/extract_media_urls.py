@@ -12,22 +12,26 @@ This script also extracts profile images. The filenames of the profile images
 are not unique, so a rename is performed.
 '''
 
-import os
 import re
-import glob
 import argparse
 
-from loader import load_files
-from app import url_to_filename
+from loader import load_data_dir
+
+
+def url_to_filename(url):
+    '''
+    >>> 'https://pbs.twimg.com/profile_images/1130275863/IMG_1429_400x400.JPG'
+    'https___pbs.twimg.com_profile_images_1130275863_IMG_1429_400x400.JPG'
+    '''
+    return re.sub('[:/]', '_', url)
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--data-dir', default='./data')
+    ap.add_argument('--data-dir', default='data')
     args = ap.parse_args()
 
-    filenames = glob.glob(os.path.join(args.data_dir, 'js/tweets/*.js'))
-    data = load_files(filenames)
+    data = load_data_dir(args.data_dir)
 
     media_urls = set()
     profile_image_urls = set()

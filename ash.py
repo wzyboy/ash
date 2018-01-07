@@ -141,15 +141,6 @@ def in_reply_to_link(tweet):
     return get_tweet_link(tweet['in_reply_to_screen_name'], tweet['in_reply_to_status_id'])
 
 
-@app.template_filter('url_to_filename')
-def url_to_filename(url):
-    '''
-    >>> 'https://pbs.twimg.com/profile_images/1130275863/IMG_1429_400x400.JPG'
-    'https___pbs.twimg.com_profile_images_1130275863_IMG_1429_400x400.JPG'
-    '''
-    return re.sub('[:/]', '_', url)
-
-
 @app.template_filter('s3_link')
 def get_s3_link(s3_key):
     return 'https://s3.amazonaws.com/{}/{}'.format(app.config['T_MEDIA_S3_BUCKET'], s3_key)
