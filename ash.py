@@ -217,7 +217,10 @@ def search_tweet(ext):
 
     basic_auth = app.config.get('T_SEARCH_BASIC_AUTH')
     if basic_auth and (basic_auth != flask.request.authorization):
-        flask.abort(401)
+        resp = flask.Response(
+            status=401, headers={'WWW-Authenticate': 'Basic realm="Auth Required"'}
+        )
+        return resp
 
     keyword = flask.request.args.get('q')
     if keyword:
