@@ -20,7 +20,7 @@
 Set up a venv is recommended:
 
 ```bash
-$ python3 -m venv venv --prompt ash
+$ python3 -m venv venv
 $ source venv/bin/activate
 ```
 
