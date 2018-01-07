@@ -146,6 +146,16 @@ def get_s3_link(s3_key):
     return 'https://s3.amazonaws.com/{}/{}'.format(app.config['T_MEDIA_S3_BUCKET'], s3_key)
 
 
+@app.route('/')
+def root():
+    return flask.redirect(flask.url_for('search_tweet', ext='html'))
+
+
+@app.route('/tweet/')
+def index():
+    return flask.redirect(flask.url_for('search_tweet', ext='html'))
+
+
 @app.route('/tweet/<int:tweet_id>.<ext>')
 def get_tweet(tweet_id, ext):
     tdb = get_tdb()
