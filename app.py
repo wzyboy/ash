@@ -1,0 +1,248 @@
+'''
+A Flask-based web server that serves Twitter Archive.
+
+Features:
+- No external database needed;
+- Support HTML, TXT and JSON output;
+- View of a single tweet (/tweet/<tweet_id>.html);
+- Full-text search (/tweet/search.html);
+- Linkify mentions, hashtags, retweets, etc;
+- Restore sanity to t.co-wrapped links and non-links;
+- Load images from Twitter, or on-disk mirror, or S3 mirror.
+'''
+
+import os
+import re
+import json
+import pprint
+import sqlite3
+import itertools
+from operator import itemgetter
+from urllib.parse import urlparse
+from collections.abc import Mapping
+
+import flask
+
+
+app = flask.Flask(
+    __name__,
+    static_url_path='/tweet/static'
+)
+app.config.from_object('config.Config')
+
+
+class TweetsDatabase(Mapping):
+
+    def __init__(self, db_name):
+        self.db = sqlite3.connect(db_name)
+        self.db.row_factory = sqlite3.Row
+
+    def __getitem__(self, tweet_id):
+        if not isinstance(tweet_id, int):
+            raise TypeError('Tweet ID should be int')
+        cur = self.db.cursor()
+        row = cur.execute('select * from tweets where id = ?', (tweet_id,)).fetchone()
+        if row is None:
+            raise KeyError('Tweet ID {} not found'.format(tweet_id))
+        else:
+            tweet = self._row_to_tweet(row)
+        return tweet
+
+    def __iter__(self):
+        cur = self.db.cursor()
+        for row in cur.execute('select id from tweets'):
+            yield row['id']
+
+    def __len__(self):
+        cur = self.db.cursor()
+        row = cur.execute('select count(*) as c from tweets').fetchone()
+        return row['c']
+
+    def _row_to_tweet(self, row):
+        _tweet = row['_source']
+        tweet = json.loads(_tweet)
+        return tweet
+
+    def search(self, keyword, limit=100):
+        cur = self.db.cursor()
+        rows = cur.execute(
+            'select * from tweets where tweet_text like ? order by id desc limit ?',
+            ('%{}%'.format(keyword), limit)
+        ).fetchall()
+        tweets = [self._row_to_tweet(row) for row in rows]
+        return tweets
+
+
+def get_tdb():
+    if not hasattr(flask.g, 'tdb'):
+        db_name = app.config['T_SQLITE']
+        flask.g.tdb = TweetsDatabase(db_name)
+    return flask.g.tdb
+
+
+@app.template_global('get_tweet_link')
+def get_tweet_link(screen_name, tweet_id):
+    tdb = get_tdb()
+    if tweet_id in tdb:
+        link = flask.url_for('get_tweet', tweet_id=tweet_id, ext='html')
+    else:
+        link = 'https://twitter.com/{}/status/{}'.format(screen_name, tweet_id)
+    return link
+
+
+@app.template_filter('format_tweet_text')
+def format_tweet_text(tweet):
+
+    tweet_text = tweet['text']
+
+    # Replace t.co-wrapped URLs with their original URLs
+    urls = itertools.chain(tweet['entities']['urls'], tweet['entities']['media'])
+    for u in urls:
+        # t.co wraps everything *looks like* a URL, even bare domains. We bring
+        # sanity back.
+        # A bare domain would be prepended a scheme but not a path,
+        # while a real URL would always have a path.
+        # https://docs.python.org/3/library/urllib.parse.html#url-parsing
+        if urlparse(u['expanded_url']).path:
+            a = '<a href="{expanded_url}">{display_url}</a>'.format_map(u)
+        else:
+            a = u['display_url']
+        tweet_text = tweet_text.replace(u['url'], a)
+
+    # Linkify hashtags
+    hashtags = tweet['entities']['hashtags']
+    for h in hashtags:
+        hashtag = '#{}'.format(h['text'])
+        link = 'https://twitter.com/hashtag/{}'.format(h['text'])
+        a = '<a href="{}">{}</a>'.format(link, hashtag)
+        tweet_text = tweet_text.replace(hashtag, a)
+
+    # Linkify user mentions
+    users = tweet['entities']['user_mentions']
+    for user in users:
+        # case-insensitive and case-preserving
+        at_user = r'(?i)@({})'.format(user['screen_name'])
+        link = 'https://twitter.com/{}'.format(user['screen_name'])
+        a = r'<a href="{}" title="{}">@\1</a>'.format(link, user['name'])
+        tweet_text = re.sub(at_user, a, tweet_text)
+
+    # Link to retweeted status
+    retweeted = tweet.get('retweeted_status')
+    if retweeted:
+        link = get_tweet_link(retweeted['user']['screen_name'], retweeted['id'])
+        a = '<a href="{}">RT</a>'.format(link)
+        tweet_text = tweet_text.replace('RT', a, 1)
+
+    return tweet_text
+
+
+@app.template_filter('in_reply_to_link')
+def in_reply_to_link(tweet):
+    return get_tweet_link(tweet['in_reply_to_screen_name'], tweet['in_reply_to_status_id'])
+
+
+@app.template_filter('url_to_filename')
+def url_to_filename(url):
+    '''
+    >>> 'https://pbs.twimg.com/profile_images/1130275863/IMG_1429_400x400.JPG'
+    'https___pbs.twimg.com_profile_images_1130275863_IMG_1429_400x400.JPG'
+    '''
+    return re.sub('[:/]', '_', url)
+
+
+@app.template_filter('s3_link')
+def get_s3_link(s3_key):
+    return 'https://s3.amazonaws.com/{}/{}'.format(app.config['T_MEDIA_S3_BUCKET'], s3_key)
+
+
+@app.route('/tweet/<int:tweet_id>.<ext>')
+def get_tweet(tweet_id, ext):
+    tdb = get_tdb()
+    try:
+        tweet = tdb[tweet_id]
+    except KeyError:
+        flask.abort(404)
+    if ext not in ('txt', 'json', 'html'):
+        flask.abort(404)
+
+    # Text and JSON output
+    if ext == 'txt':
+        rendered = pprint.pformat(tweet)
+        resp = flask.make_response(rendered)
+        resp.content_type = 'text/plain'
+        return resp
+    elif ext == 'json':
+        rendered = flask.json.dumps(tweet, ensure_ascii=False)
+        resp = flask.make_response(rendered)
+        resp.content_type = 'application/json'
+        return resp
+
+    # HTML output
+
+    # Generate img src
+    images_src = []
+    media = tweet['entities']['media']
+    for m in media:
+        media_url = m['media_url_https']
+        media_key = os.path.basename(media_url)
+        if app.config['T_MEDIA_FROM'] == 'fs':
+            img_src = flask.url_for('get_media', filename=media_key)
+        elif app.config['T_MEDIA_FROM'] == 's3':
+            img_src = get_s3_link(media_key)
+        elif app.config['T_MEDIA_FROM'] == 'twitter':
+            img_src = media_url
+        images_src.append(img_src)
+
+    # Render HTML
+    rendered = flask.render_template(
+        'tweet.html',
+        tweet=tweet,
+        images_src=images_src
+    )
+    resp = flask.make_response(rendered)
+
+    return resp
+
+
+@app.route('/tweet/media/<path:filename>')
+def get_media(filename):
+    return flask.send_from_directory(app.config['T_MEDIA_FS_PATH'], filename)
+
+
+@app.route('/tweet/search.<ext>')
+def search_tweet(ext):
+    if ext not in ('html', 'txt', 'json'):
+        flask.abort(404)
+
+    keyword = flask.request.args.get('q')
+    if keyword:
+        tdb = get_tdb()
+        tweets = sorted(
+            tdb.search(keyword),
+            key=itemgetter('id'),
+            reverse=True
+        )
+    else:
+        tweets = []
+
+    # Text and JSON output
+    if ext == 'txt':
+        rendered = pprint.pformat(tweets)
+        resp = flask.make_response(rendered)
+        resp.content_type = 'text/plain'
+        return resp
+    elif ext == 'json':
+        rendered = flask.json.dumps(tweets, ensure_ascii=False)
+        resp = flask.make_response(rendered)
+        resp.content_type = 'application/json'
+        return resp
+
+    # HTML output
+    rendered = flask.render_template(
+        'search.html',
+        keyword=keyword,
+        tweets=tweets
+    )
+    resp = flask.make_response(rendered)
+
+    return resp
