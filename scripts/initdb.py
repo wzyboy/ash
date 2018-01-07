@@ -17,26 +17,21 @@ from loader import load_files
 def init_sqlite():
 
     ap = argparse.ArgumentParser()
-    ap.add_argument('-d', '--data-dir')
+    ap.add_argument('-d', '--data-dir', default='data')
     ap.add_argument('-o', '--output', default='tweets.db')
     args = ap.parse_args()
 
     if os.path.isfile(args.output):
         raise FileExistsError('{} already exists. Try --output, or delete it'.format(args.output))
 
-    db = sqlite3.connect(args.output)
-    cursor = db.cursor()
-
-    if not args.data_dir:
-        here = os.path.dirname(os.path.abspath(__file__))
-        data_dir = os.path.abspath(os.path.join(here, '../data'))
-    else:
-        data_dir = args.data_dir
-
-    print('Loading tweets from data dir: {}'.format(data_dir))
-    filenames = glob.glob(os.path.join(data_dir, 'js/tweets/*.js'))
+    filenames_glob = os.path.join(os.path.abspath(args.data_dir), 'js/tweets/*.js')
+    print('Loading tweets from archive files: {}'.format(filenames_glob))
+    filenames = glob.glob(filenames_glob)
     if not filenames:
         raise SystemExit('No files found. Try --data-dir')
+
+    db = sqlite3.connect(args.output)
+    cursor = db.cursor()
 
     data = load_files(filenames)
     tweets = [
