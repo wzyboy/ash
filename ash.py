@@ -72,6 +72,15 @@ class TweetsDatabase(Mapping):
         tweets = [self._row_to_tweet(row) for row in rows]
         return tweets
 
+    def tail(self, limit=10):
+        cur = self.db.cursor()
+        rows = cur.execute(
+            'select * from tweets order by id desc limit ?',
+            (limit,)
+        ).fetchall()
+        tweets = [self._row_to_tweet(row) for row in rows]
+        return tweets
+
 
 def get_tdb():
     if not hasattr(flask.g, 'tdb'):
@@ -148,12 +157,24 @@ def get_s3_link(s3_key):
 
 @app.route('/')
 def root():
-    return flask.redirect(flask.url_for('search_tweet', ext='html'))
+    return flask.redirect(flask.url_for('index'))
 
 
 @app.route('/tweet/')
 def index():
-    return flask.redirect(flask.url_for('search_tweet', ext='html'))
+
+    tdb = get_tdb()
+    total_tweets = len(tdb)
+    latest_tweets = tdb.tail()
+
+    rendered = flask.render_template(
+        'index.html',
+        total_tweets=total_tweets,
+        tweets=latest_tweets,
+    )
+    resp = flask.make_response(rendered)
+
+    return resp
 
 
 @app.route('/tweet/<int:tweet_id>.<ext>')
