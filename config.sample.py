@@ -22,3 +22,9 @@ class Config:
 
     # Uncomment to enable basic auth on search page
     #T_SEARCH_BASIC_AUTH = {'username': 'foo', 'password': 'bar'}
+
+    # Uncomment to enable external Tweets support. If a Tweet is not found in
+    # local database, it will be fetched from Twitter API.
+    #T_EXTERNAL_TWEETS = True
+    #T_TWITTER_KEY = 'consumer key'
+    #T_TWITTER_SECRET = 'consumer secret'
