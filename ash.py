@@ -85,7 +85,7 @@ class TweetsDatabase(Mapping):
     def search(self, keyword, limit=100):
         cur = self.db.cursor()
         rows = cur.execute(
-            'select * from tweets where tweet_text like ? order by id desc limit ?',
+            'select * from tweets where text like ? order by id desc limit ?',
             ('%{}%'.format(keyword), limit)
         ).fetchall()
         tweets = [self._row_to_tweet(row) for row in rows]

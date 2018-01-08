@@ -40,7 +40,7 @@ def init_sqlite():
     db = sqlite3.connect(args.output)
     cursor = db.cursor()
 
-    cursor.execute('create table if not exists tweets (id integer primary key, tweet_text text, _source text)')
+    cursor.execute('create table if not exists tweets (id integer primary key, text text, _source text)')
     cursor.executemany('insert or ignore into tweets values (?, ?, ?)', tweets)
     print('Inserted {} tweets into SQLite'.format(cursor.rowcount))
     db.commit()
