@@ -1,14 +1,5 @@
 '''
 A Flask-based web server that serves Twitter Archive.
-
-Features:
-- No external database needed;
-- Support HTML, TXT and JSON output;
-- View of a single tweet (/tweet/<tweet_id>.html);
-- Full-text search (/tweet/search.html);
-- Linkify mentions, hashtags, retweets, etc;
-- Restore sanity to t.co-wrapped links and non-links;
-- Load images from Twitter, or on-disk mirror, or S3 mirror.
 '''
 
 import os
@@ -18,10 +9,17 @@ import pprint
 import sqlite3
 import itertools
 from operator import itemgetter
+from functools import lru_cache
 from urllib.parse import urlparse
 from collections.abc import Mapping
 
 import flask
+try:
+    import requests
+except ImportError:
+    HAS_REQUESTS = False
+else:
+    HAS_REQUESTS = True
 
 
 app = flask.Flask(
@@ -29,6 +27,27 @@ app = flask.Flask(
     static_url_path='/tweet/static'
 )
 app.config.from_object('config.Config')
+
+
+# Set up external Tweets support
+if app.config.get('T_EXTERNAL_TWEETS'):
+
+    if not HAS_REQUESTS:
+        raise RuntimeError('Python library "requests" is required to enable external Tweets support')
+
+    # https://developer.twitter.com/en/docs/basics/authentication/api-reference/token
+    resp = requests.post(
+        'https://api.twitter.com/oauth2/token',
+        headers={
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+        },
+        auth=(app.config['T_TWITTER_KEY'], app.config['T_TWITTER_SECRET']),
+        data='grant_type=client_credentials'
+    )
+    if not resp.ok:
+        raise RuntimeError('Failed to set up external Tweets support. Error from Twitter: {}'.format(resp.json()))
+    bearer_token = resp.json()['access_token']
+    app.config['T_TWITTER_TOKEN'] = bearer_token
 
 
 class TweetsDatabase(Mapping):
@@ -91,12 +110,18 @@ def get_tdb():
 
 @app.template_global('get_tweet_link')
 def get_tweet_link(screen_name, tweet_id):
+
+    twitter_link = 'https://twitter.com/{}/status/{}'.format(screen_name, tweet_id)
+    self_link = flask.url_for('get_tweet', tweet_id=tweet_id, ext='html')
+
+    if app.config.get('T_EXTERNAL_TWEETS'):
+        return self_link
+
     tdb = get_tdb()
     if tweet_id in tdb:
-        link = flask.url_for('get_tweet', tweet_id=tweet_id, ext='html')
+        return self_link
     else:
-        link = 'https://twitter.com/{}/status/{}'.format(screen_name, tweet_id)
-    return link
+        return twitter_link
 
 
 @app.template_filter('format_tweet_text')
@@ -180,15 +205,39 @@ def index():
     return resp
 
 
+@lru_cache(maxsize=1024)
+def fetch_tweet(tweet_id):
+
+    resp = requests.get(
+        'https://api.twitter.com/1.1/statuses/show.json',
+        headers={
+            'Authorization': 'Bearer {}'.format(app.config['T_TWITTER_TOKEN'])
+        },
+        params={
+            'id': tweet_id
+        },
+    )
+    if resp.ok:
+        tweet = resp.json()
+        return tweet
+    else:
+        flask.abort(resp.status_code)
+
+
 @app.route('/tweet/<int:tweet_id>.<ext>')
 def get_tweet(tweet_id, ext):
+
+    if ext not in ('txt', 'json', 'html'):
+        flask.abort(404)
+
     tdb = get_tdb()
     try:
         tweet = tdb[tweet_id]
     except KeyError:
-        flask.abort(404)
-    if ext not in ('txt', 'json', 'html'):
-        flask.abort(404)
+        if app.config.get('T_EXTERNAL_TWEETS'):
+            tweet = fetch_tweet(tweet_id)
+        else:
+            flask.abort(404)
 
     # Text and JSON output
     if ext == 'txt':

@@ -1,5 +1,16 @@
 # Twitter Archive Server
 
+## Features:
+
+- No external database needed;
+- HTML, TXT and JSON output;
+- Full-text search (optional basic auth);
+- Linkify mentions, hashtags, retweets, etc;
+- Restore sanity to t.co-wrapped links and non-links;
+- Load images from Twitter, or on-disk mirror, or S3 mirror;
+- Fetch Tweets from Twitter API if not found in the archive.
+
+
 ## Requirements
 
 - Python 3
