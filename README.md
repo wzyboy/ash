@@ -3,6 +3,7 @@
 ## Features:
 
 - No external database needed;
+- Multiple archives from different accounts could be merged together;
 - HTML, TXT and JSON output;
 - Full-text search (optional basic auth);
 - Linkify mentions, hashtags, retweets, etc;
@@ -24,6 +25,8 @@
 3. Load archive files into SQLite: `./scripts/initdb.py`;
 4. (Optional) Use `./scripts/extract_media_urls.py` to extract and download media files;
 5. Copy `config.sample.py` to `config.py` and edit it to meet your needs.
+
+You could load multiple archives from different accounts into SQLite by repeating step 2 with `-a / --append` flag.
 
 
 ## Running

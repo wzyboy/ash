@@ -69,7 +69,7 @@ class TweetsDatabase(Mapping):
 
     def __iter__(self):
         cur = self.db.cursor()
-        for row in cur.execute('select id from tweets'):
+        for row in cur.execute('select id from tweets order by id asc'):
             yield row['id']
 
     def __len__(self):
