@@ -14,17 +14,20 @@ Features:
 import os
 import re
 import json
-import base64
 import pprint
 import sqlite3
 import itertools
 from operator import itemgetter
 from urllib.parse import urlparse
-from urllib.request import urlopen
-from urllib.request import Request
 from collections.abc import Mapping
 
 import flask
+try:
+    import requests
+except ImportError:
+    HAS_REQUESTS = False
+else:
+    HAS_REQUESTS = True
 
 
 app = flask.Flask(
@@ -36,23 +39,20 @@ app.config.from_object('config.Config')
 
 # Set up external Tweets support
 if app.config.get('T_EXTERNAL_TWEETS'):
-    print('External Tweets support is enabled.')
+
+    if not HAS_REQUESTS:
+        raise RuntimeError('Python library "requests" is required to enable external Tweets support')
+
     # https://developer.twitter.com/en/docs/basics/authentication/api-reference/token
-    basic_auth = base64.b64encode(
-        '{}:{}'.format(app.config['T_TWITTER_KEY'], app.config['T_TWITTER_SECRET']).encode('utf-8')
-    ).decode('utf-8')
-    req = Request(
+    resp = requests.post(
         'https://api.twitter.com/oauth2/token',
-        method='POST',
         headers={
-            'Authorization': 'Basic {}'.format(basic_auth),
             'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
         },
-        data=b'grant_type=client_credentials'
+        auth=(app.config['T_TWITTER_KEY'], app.config['T_TWITTER_SECRET']),
+        data='grant_type=client_credentials'
     )
-    resp = urlopen(req)
-    resp_json = json.loads(resp.read().decode('utf-8'))
-    bearer_token = resp_json['access_token']
+    bearer_token = resp.json()['access_token']
     app.config['T_TWITTER_TOKEN'] = bearer_token
 
 
