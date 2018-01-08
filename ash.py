@@ -1,14 +1,5 @@
 '''
 A Flask-based web server that serves Twitter Archive.
-
-Features:
-- No external database needed;
-- Support HTML, TXT and JSON output;
-- View of a single tweet (/tweet/<tweet_id>.html);
-- Full-text search (/tweet/search.html);
-- Linkify mentions, hashtags, retweets, etc;
-- Restore sanity to t.co-wrapped links and non-links;
-- Load images from Twitter, or on-disk mirror, or S3 mirror.
 '''
 
 import os
