@@ -158,7 +158,7 @@ def format_tweet_text(tweet):
     users = tweet['entities'].get('user_mentions', [])
     for user in users:
         # case-insensitive and case-preserving
-        at_user = r'(?i)@({})'.format(user['screen_name'])
+        at_user = r'(?i)@({})\b'.format(user['screen_name'])
         link = 'https://twitter.com/{}'.format(user['screen_name'])
         a = r'<a href="{}" title="{}">@\1</a>'.format(link, user['name'])
         tweet_text = re.sub(at_user, a, tweet_text)
