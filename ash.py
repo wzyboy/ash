@@ -18,6 +18,7 @@ import pprint
 import sqlite3
 import itertools
 from operator import itemgetter
+from functools import lru_cache
 from urllib.parse import urlparse
 from collections.abc import Mapping
 
@@ -211,15 +212,39 @@ def index():
     return resp
 
 
+@lru_cache(maxsize=1024)
+def fetch_tweet(tweet_id):
+
+    resp = requests.get(
+        'https://api.twitter.com/1.1/statuses/show.json',
+        headers={
+            'Authorization': 'Bearer {}'.format(app.config['T_TWITTER_TOKEN'])
+        },
+        params={
+            'id': tweet_id
+        },
+    )
+    if resp.ok:
+        tweet = resp.json()
+        return tweet
+    else:
+        flask.abort(resp.status_code)
+
+
 @app.route('/tweet/<int:tweet_id>.<ext>')
 def get_tweet(tweet_id, ext):
+
+    if ext not in ('txt', 'json', 'html'):
+        flask.abort(404)
+
     tdb = get_tdb()
     try:
         tweet = tdb[tweet_id]
     except KeyError:
-        flask.abort(404)
-    if ext not in ('txt', 'json', 'html'):
-        flask.abort(404)
+        if app.config.get('T_EXTERNAL_TWEETS'):
+            tweet = fetch_tweet(tweet_id)
+        else:
+            flask.abort(404)
 
     # Text and JSON output
     if ext == 'txt':
