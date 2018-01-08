@@ -53,6 +53,8 @@ if app.config.get('T_EXTERNAL_TWEETS'):
         auth=(app.config['T_TWITTER_KEY'], app.config['T_TWITTER_SECRET']),
         data='grant_type=client_credentials'
     )
+    if not resp.ok:
+        raise RuntimeError('Failed to set up external Tweets support. Error from Twitter: {}'.format(resp.json()))
     bearer_token = resp.json()['access_token']
     app.config['T_TWITTER_TOKEN'] = bearer_token
 
