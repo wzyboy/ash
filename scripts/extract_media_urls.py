@@ -39,7 +39,7 @@ def main():
     for item in data:
 
         # Media (including media in retweeted status)
-        media = item['entities']['media']
+        media = item['entities'].get('media', [])
         for m in media:
             media_url = m['media_url_https']
             media_urls.add(media_url)

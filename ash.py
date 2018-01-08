@@ -105,7 +105,10 @@ def format_tweet_text(tweet):
     tweet_text = tweet['text']
 
     # Replace t.co-wrapped URLs with their original URLs
-    urls = itertools.chain(tweet['entities']['urls'], tweet['entities']['media'])
+    urls = itertools.chain(
+        tweet['entities'].get('urls', []),
+        tweet['entities'].get('media', []),
+    )
     for u in urls:
         # t.co wraps everything *looks like* a URL, even bare domains. We bring
         # sanity back.
@@ -119,7 +122,7 @@ def format_tweet_text(tweet):
         tweet_text = tweet_text.replace(u['url'], a)
 
     # Linkify hashtags
-    hashtags = tweet['entities']['hashtags']
+    hashtags = tweet['entities'].get('hashtags', [])
     for h in hashtags:
         hashtag = '#{}'.format(h['text'])
         link = 'https://twitter.com/hashtag/{}'.format(h['text'])
@@ -127,7 +130,7 @@ def format_tweet_text(tweet):
         tweet_text = tweet_text.replace(hashtag, a)
 
     # Linkify user mentions
-    users = tweet['entities']['user_mentions']
+    users = tweet['entities'].get('user_mentions', [])
     for user in users:
         # case-insensitive and case-preserving
         at_user = r'(?i)@({})'.format(user['screen_name'])
@@ -203,7 +206,7 @@ def get_tweet(tweet_id, ext):
 
     # Generate img src
     images_src = []
-    media = tweet['entities']['media']
+    media = tweet['entities'].get('media', [])
     for m in media:
         media_url = m['media_url_https']
         media_key = os.path.basename(media_url)
