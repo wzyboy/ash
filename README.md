@@ -31,7 +31,7 @@ $ pip install Flask
 $ FLASK_APP=ash.py flask run --port 3026
 ```
 
-You could now search your Twitter Archive at: http://localhost:3026/
+You could now view and search your Twitter Archive at: http://localhost:3026/
 
 -----
 
