@@ -88,20 +88,17 @@ class TweetsDatabase(Mapping):
         # Be careful of little bobby tables
         # https://xkcd.com/327/
         _where = []
-        _params = []
+        params = {'limit': limit}
         if keyword:
-            _where.append('text like ?')
-            _params.append('%{}%'.format(keyword))
+            _where.append('text like :keyword')
+            params['keyword'] = '%{}%'.format(keyword)
         if user_screen_name:
-            _where.append('json_extract(_source, "$.user.screen_name") = ?')
-            _params.append(user_screen_name)
+            _where.append('json_extract(_source, "$.user.screen_name") = :user_screen_name')
+            params['user_screen_name'] = user_screen_name
 
         # Assemble the SQL
         where = 'where ' + ' and '.join(_where) or ''
-        sql = 'select * from tweets {} order by id desc limit ?'.format(where)
-        _params.append(limit)
-        params = tuple(_params)
-        print(sql, params)
+        sql = 'select * from tweets {} order by id desc limit :limit'.format(where)
 
         rows = cur.execute(sql, params).fetchall()
         tweets = [self._row_to_tweet(row) for row in rows]
