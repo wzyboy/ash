@@ -17,7 +17,13 @@ Tweets - Search
 
   <section class="search-box">
     <form action="" method="get">
-      <input type="text" name="q" value="{{ request.args.q }}" required />
+      <input type="text" name="q" value="{{ keyword }}" required/>
+      <select name="u">
+        <option value=""></option>
+        {%- for i in user_list %}
+        <option value="{{ i }}"{% if i == user %} selected{% endif %}>{{ i }}</option>
+        {%- endfor %}
+      </select>
       <input type="submit" value="Search" />
     </form>
   </section>

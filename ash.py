@@ -82,12 +82,25 @@ class TweetsDatabase(Mapping):
         tweet = json.loads(_tweet)
         return tweet
 
-    def search(self, keyword, limit=100):
+    def search(self, keyword=None, user_screen_name=None, limit=100):
         cur = self.db.cursor()
-        rows = cur.execute(
-            'select * from tweets where text like ? order by id desc limit ?',
-            ('%{}%'.format(keyword), limit)
-        ).fetchall()
+
+        # Be careful of little bobby tables
+        # https://xkcd.com/327/
+        _where = []
+        params = {'limit': limit}
+        if keyword:
+            _where.append('text like :keyword')
+            params['keyword'] = '%{}%'.format(keyword)
+        if user_screen_name:
+            _where.append('json_extract(_source, "$.user.screen_name") = :user_screen_name')
+            params['user_screen_name'] = user_screen_name
+
+        # Assemble the SQL
+        where = 'where ' + ' and '.join(_where) or ''
+        sql = 'select * from tweets {} order by id desc limit :limit'.format(where)
+
+        rows = cur.execute(sql, params).fetchall()
         tweets = [self._row_to_tweet(row) for row in rows]
         return tweets
 
@@ -99,6 +112,11 @@ class TweetsDatabase(Mapping):
         ).fetchall()
         tweets = [self._row_to_tweet(row) for row in rows]
         return tweets
+
+    def _sql(self, *args):
+        cur = self.db.cursor()
+        rows = cur.execute(*args).fetchall()
+        return rows
 
 
 def get_tdb():
@@ -295,11 +313,20 @@ def search_tweet(ext):
         )
         return resp
 
-    keyword = flask.request.args.get('q')
+    tdb = get_tdb()
+    user_list = [
+        row['u'] for row in
+        tdb._sql('select json_extract(_source, "$.user.screen_name") as u from tweets group by u')
+    ]
+
+    user = flask.request.args.get('u', '')
+    keyword = flask.request.args.get('q', '')
     if keyword:
-        tdb = get_tdb()
         tweets = sorted(
-            tdb.search(keyword),
+            tdb.search(
+                keyword=keyword,
+                user_screen_name=user,
+            ),
             key=itemgetter('id'),
             reverse=True
         )
@@ -322,6 +349,8 @@ def search_tweet(ext):
     rendered = flask.render_template(
         'search.html',
         keyword=keyword,
+        user=user,
+        user_list=user_list,
         tweets=tweets
     )
     resp = flask.make_response(rendered)
