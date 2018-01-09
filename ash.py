@@ -113,6 +113,11 @@ class TweetsDatabase(Mapping):
         tweets = [self._row_to_tweet(row) for row in rows]
         return tweets
 
+    def _sql(self, *args):
+        cur = self.db.cursor()
+        rows = cur.execute(*args).fetchall()
+        return rows
+
 
 def get_tdb():
     if not hasattr(flask.g, 'tdb'):
@@ -308,11 +313,20 @@ def search_tweet(ext):
         )
         return resp
 
-    keyword = flask.request.args.get('q')
+    tdb = get_tdb()
+    user_list = [
+        row['u'] for row in
+        tdb._sql('select json_extract(_source, "$.user.screen_name") as u from tweets group by u')
+    ]
+
+    user = flask.request.args.get('u', '')
+    keyword = flask.request.args.get('q', '')
     if keyword:
-        tdb = get_tdb()
         tweets = sorted(
-            tdb.search(keyword),
+            tdb.search(
+                keyword=keyword,
+                user_screen_name=user,
+            ),
             key=itemgetter('id'),
             reverse=True
         )
@@ -335,6 +349,8 @@ def search_tweet(ext):
     rendered = flask.render_template(
         'search.html',
         keyword=keyword,
+        user=user,
+        user_list=user_list,
         tweets=tweets
     )
     resp = flask.make_response(rendered)
