@@ -82,12 +82,28 @@ class TweetsDatabase(Mapping):
         tweet = json.loads(_tweet)
         return tweet
 
-    def search(self, keyword, limit=100):
+    def search(self, keyword=None, user_screen_name=None, limit=100):
         cur = self.db.cursor()
-        rows = cur.execute(
-            'select * from tweets where text like ? order by id desc limit ?',
-            ('%{}%'.format(keyword), limit)
-        ).fetchall()
+
+        # Be careful of little bobby tables
+        # https://xkcd.com/327/
+        _where = []
+        _params = []
+        if keyword:
+            _where.append('text like ?')
+            _params.append('%{}%'.format(keyword))
+        if user_screen_name:
+            _where.append('json_extract(_source, "$.user.screen_name") = ?')
+            _params.append(user_screen_name)
+
+        # Assemble the SQL
+        where = 'where ' + ' and '.join(_where) or ''
+        sql = 'select * from tweets {} order by id desc limit ?'.format(where)
+        _params.append(limit)
+        params = tuple(_params)
+        print(sql, params)
+
+        rows = cur.execute(sql, params).fetchall()
         tweets = [self._row_to_tweet(row) for row in rows]
         return tweets
 
