@@ -19,7 +19,7 @@ Tweets - Search
     <form action="" method="get">
       <input type="text" name="q" value="{{ keyword }}" required/>
       <select name="u">
-        <option value=""></option>
+        <option value="">(all users)</option>
         {%- for i in user_list %}
         <option value="{{ i }}"{% if i == user %} selected{% endif %}>{{ i }}</option>
         {%- endfor %}
