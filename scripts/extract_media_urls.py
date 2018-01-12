@@ -39,7 +39,12 @@ def main():
     for item in data:
 
         # Media (including media in retweeted status)
-        media = item['entities'].get('media', [])
+        try:
+            # https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/extended-entities-object
+            entities = item['extended_entities']
+        except KeyError:
+            entities = item['entities']
+        media = entities.get('media', [])
         for m in media:
             media_url = m['media_url_https']
             media_urls.add(media_url)

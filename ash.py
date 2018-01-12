@@ -273,7 +273,12 @@ def get_tweet(tweet_id, ext):
 
     # Generate img src
     images_src = []
-    media = tweet['entities'].get('media', [])
+    try:
+        # https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/extended-entities-object
+        entities = tweet['extended_entities']
+    except KeyError:
+        entities = tweet['entities']
+    media = entities.get('media', [])
     for m in media:
         media_url = m['media_url_https']
         media_key = os.path.basename(media_url)
