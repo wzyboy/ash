@@ -9,6 +9,12 @@ import os
 import json
 import sqlite3
 import argparse
+try:
+    import resource  # Unix-only module
+except ImportError:
+    HAS_RESOURCE = False
+else:
+    HAS_RESOURCE = True
 
 from loader import load_data_dir
 
@@ -49,6 +55,14 @@ def init_sqlite():
     db.commit()
 
     db.close()
+
+    if HAS_RESOURCE:
+        max_rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        print(
+            'Max resident memory usage: {}. '
+            'The unit can be kilobytes or bytes, depending on your platform.'
+            .format(max_rss)
+        )
 
 
 if __name__ == '__main__':
