@@ -3,7 +3,6 @@ import os
 import glob
 import json
 from itertools import chain
-from collections import OrderedDict
 
 
 def load_data_dir(data_dir):
@@ -18,23 +17,20 @@ def load_data_dir(data_dir):
     return data
 
 
-def load_file(filename, ordered_dict=False):
+def load_file(filename):
 
     with open(filename, 'r') as f:
-        lines = f.readlines()
         # drop the first line
+        lines = f.readlines()
         content = ''.join(lines[1:])
-        if ordered_dict:
-            data = json.loads(content, object_pairs_hook=OrderedDict)
-        else:
-            data = json.loads(content)
+        data = json.loads(content)
     return data
 
 
-def load_files(filenames, ordered_dict=False):
+def load_files(filenames):
 
     data = chain.from_iterable(
-        load_file(filename, ordered_dict) for filename in filenames
+        load_file(filename) for filename in filenames
     )
 
     return data
