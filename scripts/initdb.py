@@ -36,11 +36,10 @@ def init_sqlite():
         )
 
     data = load_data_dir(args.data_dir)
-    tweets = [
+    tweets = (
         (i['id'], i['text'], json.dumps(i))
         for i in data
-    ]
-    print('Loaded {} tweets'.format(len(data)))
+    )
 
     # Insert into SQLite
     db = sqlite3.connect(args.output)

@@ -2,6 +2,7 @@
 import os
 import glob
 import json
+from itertools import chain
 from collections import OrderedDict
 
 
@@ -32,9 +33,8 @@ def load_file(filename, ordered_dict=False):
 
 def load_files(filenames, ordered_dict=False):
 
-    data = []
-    for filename in filenames:
-        _data = load_file(filename, ordered_dict)
-        data.extend(_data)
+    data = chain.from_iterable(
+        load_file(filename, ordered_dict) for filename in filenames
+    )
 
     return data
