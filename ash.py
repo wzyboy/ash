@@ -97,7 +97,7 @@ class TweetsDatabase(Mapping):
             params['user_screen_name'] = user_screen_name
 
         # Assemble the SQL
-        where = 'where ' + ' and '.join(_where) or ''
+        where = 'where ' + ' and '.join(_where) if _where else ''
         sql = 'select * from tweets {} order by id desc limit :limit'.format(where)
 
         rows = cur.execute(sql, params).fetchall()
