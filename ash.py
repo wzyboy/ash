@@ -284,14 +284,12 @@ def get_tweet(tweet_id, ext):
     for m in media:
         media_url = m['media_url_https']
         media_key = os.path.basename(media_url)
-        if _is_external_tweet:
+        if _is_external_tweet or app.config['T_MEDIA_FROM'] == 'twitter':
             img_src = media_url
         elif app.config['T_MEDIA_FROM'] == 'fs':
             img_src = flask.url_for('get_media', filename=media_key)
         elif app.config['T_MEDIA_FROM'] == 's3':
             img_src = get_s3_link(media_key)
-        elif app.config['T_MEDIA_FROM'] == 'twitter':
-            img_src = media_url
         images_src.append(img_src)
 
     # Render HTML
