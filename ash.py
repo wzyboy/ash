@@ -249,11 +249,13 @@ def get_tweet(tweet_id, ext):
         flask.abort(404)
 
     tdb = get_tdb()
+    _is_external_tweet = False
     try:
         tweet = tdb[tweet_id]
     except KeyError:
         if app.config.get('T_EXTERNAL_TWEETS'):
             tweet = fetch_tweet(tweet_id)
+            _is_external_tweet = True
         else:
             flask.abort(404)
 
@@ -282,7 +284,9 @@ def get_tweet(tweet_id, ext):
     for m in media:
         media_url = m['media_url_https']
         media_key = os.path.basename(media_url)
-        if app.config['T_MEDIA_FROM'] == 'fs':
+        if _is_external_tweet:
+            img_src = media_url
+        elif app.config['T_MEDIA_FROM'] == 'fs':
             img_src = flask.url_for('get_media', filename=media_key)
         elif app.config['T_MEDIA_FROM'] == 's3':
             img_src = get_s3_link(media_key)
