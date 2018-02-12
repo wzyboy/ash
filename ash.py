@@ -82,7 +82,8 @@ class TweetsDatabase(Mapping):
         row = cur.execute('select count(*) as c from tweets').fetchone()
         return row['c']
 
-    def _row_to_tweet(self, row):
+    @staticmethod
+    def _row_to_tweet(row):
         _tweet = row['_source']
         tweet = json.loads(_tweet)
         return tweet
