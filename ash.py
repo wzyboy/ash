@@ -72,6 +72,11 @@ class TweetsDatabase(Mapping):
         for row in cur.execute('select id from tweets order by id asc'):
             yield row['id']
 
+    def __reversed__(self):
+        cur = self.db.cursor()
+        for row in cur.execute('select id from tweets order by id desc'):
+            yield row['id']
+
     def __len__(self):
         cur = self.db.cursor()
         row = cur.execute('select count(*) as c from tweets').fetchone()
@@ -101,15 +106,6 @@ class TweetsDatabase(Mapping):
         sql = 'select * from tweets {} order by id desc limit :limit'.format(where)
 
         rows = cur.execute(sql, params).fetchall()
-        tweets = [self._row_to_tweet(row) for row in rows]
-        return tweets
-
-    def tail(self, limit=10):
-        cur = self.db.cursor()
-        rows = cur.execute(
-            'select * from tweets order by id desc limit ?',
-            (limit,)
-        ).fetchall()
         tweets = [self._row_to_tweet(row) for row in rows]
         return tweets
 
@@ -211,7 +207,7 @@ def index():
 
     tdb = get_tdb()
     total_tweets = len(tdb)
-    latest_tweets = tdb.tail()
+    latest_tweets = [tdb[tid] for tid in itertools.islice(reversed(tdb), 10)]
 
     rendered = flask.render_template(
         'index.html',
