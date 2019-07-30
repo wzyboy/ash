@@ -7,7 +7,8 @@ class Tweet(models.Model):
     created_at = models.DateTimeField()
     user_id = models.IntegerField()
     user_screen_name = models.CharField(max_length=32)
-    text = models.TextField()
+    text = models.TextField(default='')
+    _raw = models.TextField(default='')
 
     class Meta:
         db_table = 'tweets'

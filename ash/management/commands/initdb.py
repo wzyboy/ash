@@ -31,6 +31,7 @@ class Command(BaseCommand):
                 user_id=i['user']['id'],
                 user_screen_name=i['user']['screen_name'],
                 text=i['text'],
+                _raw=str(i),
             )
             for i in data
         ]
