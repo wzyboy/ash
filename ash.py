@@ -142,7 +142,10 @@ def get_tweet_link(screen_name, tweet_id):
 @app.template_filter('format_tweet_text')
 def format_tweet_text(tweet):
 
-    tweet_text = tweet['text']
+    try:
+        tweet_text = tweet['full_text']
+    except KeyError:
+        tweet_text = tweet['text']
 
     # Replace t.co-wrapped URLs with their original URLs
     urls = itertools.chain(
@@ -229,7 +232,8 @@ def fetch_tweet(tweet_id):
             'Authorization': 'Bearer {}'.format(app.config['T_TWITTER_TOKEN'])
         },
         params={
-            'id': tweet_id
+            'id': tweet_id,
+            'tweet_mode': 'extended'
         },
     )
     if resp.ok:
