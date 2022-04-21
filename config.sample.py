@@ -14,8 +14,9 @@ class Config:
     # twitter: The media files will be hot-linked from Twitter.
     T_MEDIA_FROM = 'twitter'
 
-    # S3 bucket name if loading images from S3
+    # S3 bucket name and region if loading images from S3
     T_MEDIA_S3_BUCKET = 'your-bucket-name'
+    T_MEDIA_S3_BUCKET_REGION = 'us-west-2'
 
     # Directory path if loading images from FS
     T_MEDIA_FS_PATH = './media'

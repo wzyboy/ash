@@ -198,7 +198,11 @@ def in_reply_to_link(tweet):
 
 @app.template_filter('s3_link')
 def get_s3_link(s3_key):
-    return 'https://{}.s3.amazonaws.com/{}'.format(app.config['T_MEDIA_S3_BUCKET'], s3_key)
+    return 'https://{}.s3.{}.amazonaws.com/{}'.format(
+        app.config['T_MEDIA_S3_BUCKET'],
+        app.config['T_MEDIA_S3_BUCKET_REGION'],
+        s3_key
+    )
 
 
 @app.route('/')
