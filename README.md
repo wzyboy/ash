@@ -38,7 +38,7 @@ $ python3 -m venv venv
 $ source venv/bin/activate
 ```
 
-For quick start:
+For development / quick start:
 
 ```bash
 $ pip install Flask
@@ -49,16 +49,4 @@ You could now view and search your Twitter Archive at: http://localhost:3026/
 
 -----
 
-For production deployment, you may want to use uWSGI and NGINX:
-
-```bash
-$ pip install Flask
-$ pip install uwsgi
-$ uwsgi uwsgi.ini
-```
-
-```nginx
-location /tweet {
-  proxy_pass http://127.0.0.1:3026;
-}
-```
+For production deployment, you may want to use [Gunicorn](https://docs.gunicorn.org/en/stable/deploy.html).
