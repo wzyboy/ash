@@ -1,5 +1,7 @@
 # Twitter Archive Server
 
+This project is archived. See [ash2](https://github.com/wzyboy/ash2).
+
 ## Features:
 
 - No external database needed;
